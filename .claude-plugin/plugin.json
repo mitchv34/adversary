@@ -1,0 +1,7 @@
+{
+  "name": "adversary",
+  "version": "0.1.0",
+  "description": "Adversarial review that bites, not flatters: independent parallel reviewers that verify rather than read, construct placebo tests, and produce a tiered fix plan. Three phases — review, annotate, fixplan.",
+  "author": "mitchv34",
+  "license": "MIT"
+}
