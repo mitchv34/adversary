@@ -594,7 +594,7 @@ persona.*
 > name and known pitfalls? Are the constructs the ones the field actually uses? Cite specific prior
 > work.
 
-### `critic-completeness` — the synthesiser *(runs LAST, not in parallel; specified)*
+### `critic-completeness` — the synthesiser *(runs LAST, not in parallel)* **[built]**
 **Use for:** `--depth deep` only. The one persona allowed to see the others' output.
 
 > You have all findings from the other reviewers. Your job: **what did they all miss?** Which
@@ -633,20 +633,24 @@ inability), `referee-eval-protocol` (harness configuration degrees of freedom), 
 
 ## Selection guidance
 
-| Target type | Recommended (pre-ticked) |
+| Target type | Recommended (surfaced first, labelled *Recommended*) |
 |---|---|
 | Empirical / causal research | econometrics + measurement + data-integrity |
 | Client report / deck / brief | tie-out + summary-fidelity + visual-argument |
 | Public release / press / policy brief | hostile-reader + summary-fidelity + editor-claims |
 | LLM-coded dataset → statistics | surrogate-labels + measurement + data-integrity |
 | Predictive model / benchmark claim | leakage + surrogate-labels + fragility |
-| Data pipeline / ETL | data-integrity + leakage + statistics |
+| Data pipeline / ETL | data-integrity + leakage + statistics† |
 | Published tables / public data product | disclosure + tie-out + data-integrity |
 | Commissioned / stakeholder-facing analysis | motivated-analysis + fragility + editor-claims |
 | Preregistered study / analysis with a spec | protocol-adherence + fragility + econometrics |
-| Literature review / evidence brief | citation-integrity + domain + editor-claims |
-| Service / API / infrastructure | software + security + operability |
-| Code change / refactor | software + simplicity + security |
+| Literature review / evidence brief | citation-integrity + domain† + editor-claims |
+| Service / API / infrastructure | software† + security† + operability† |
+| Code change / refactor | software† + simplicity† + security† |
+
+**†** = specified above but **not yet built** as an agent file (`referee-statistics`, `referee-domain`,
+`referee-software`, `auditor-security`, `critic-operability`, `auditor-simplicity`). The skill offers
+only **[built]** personas and drops † names at dispatch; engineering targets are not yet served.
 
 Rules of thumb:
 - **Three is the sweet spot.** Two rarely collide; five is mostly redundant unless the artifact is
