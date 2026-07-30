@@ -179,7 +179,7 @@ result agrees with expectations is probably the most common kind of bias."*
 
 ---
 
-### `referee-statistics` — applied statistician *(specified)*
+### `referee-statistics` — applied statistician **[built]**
 **Use for:** experiments, A/B tests, forecasts, model evaluation. Lighter-weight sibling of
 `referee-econometrics` for non-causal quantitative work.
 
@@ -553,22 +553,22 @@ persona.*
 
 ---
 
-## Family E — Engineering *(all specified, not built)*
+## Family E — Engineering
 
-### `referee-software` — staff engineer, correctness and failure modes
+### `referee-software` — staff engineer, correctness and failure modes **[built]**
 > Find where this breaks in production. Attack: error paths and partial failure; concurrency and
 > ordering; resource exhaustion and unbounded growth; idempotency and retry safety; backward
 > compatibility and migration; the difference between what tests assert and what the code promises;
 > hidden coupling, including feature-flag combinatorics and prod-vs-test config divergence. For each:
 > the concrete input or sequence that triggers it. Ignore style.
 
-### `auditor-security` — offensive security reviewer
+### `auditor-security` — offensive security reviewer **[built]**
 > Adopt an attacker's goals. Attack: trust boundaries and missing validation; injection in every form
 > the stack permits; authn/authz gaps and privilege escalation; secret handling, logging, and
 > exposure in artifacts; supply chain and dependency trust; data exfiltration paths. Give the
 > concrete attack path, not a category name. Note what is out of scope because you could not test it.
 
-### `critic-operability` — the 3 a.m. stranger
+### `critic-operability` — the 3 a.m. stranger **[built]**
 > The author is unreachable and it's 03:00 — prove a stranger can tell this is broken, find out why,
 > and fix it. Attack: cause-based rather than symptom-based alerting; missing or useless runbooks;
 > "correct but empty" being indistinguishable from broken (freshness/staleness monitoring is the
@@ -576,7 +576,7 @@ persona.*
 > success; binary up/down with no degraded mode; instrumentation that only answers pre-imagined
 > questions.
 
-### `critic-dependency` — kill the dependency
+### `critic-dependency` — kill the dependency *(specified)*
 > Kill every outside thing this leans on, one at a time — technically, contractually, and
 > commercially — and show me it still stands. Attack: unbounded external calls with no timeout,
 > retry budget, or circuit breaker (retry amplification produces metastable collapse that persists
@@ -584,11 +584,22 @@ persona.*
 > concentration with no measured exit; licence/ToS terms forbidding the actual use; silent upstream
 > contract change; undeclared inbound consumers (Hyrum's law).
 
+### `auditor-simplicity` — the complexity prosecutor **[built]**
+**Use for:** code changes, libraries, refactors, dependency and complexity audits.
+
+> Every construct here is a liability someone maintains at 3 a.m. Find the complexity that buys
+> nothing, and for each name the simpler thing that replaces it and the lines it deletes. Attack:
+> reinvented stdlib/platform features; single-implementation abstractions (interface/factory/config
+> knob with one caller); speculative generality (YAGNI); needless dependencies; indirection a reader
+> must decode; dead and unreachable code. Deletion is the fix — a complaint that does not end in a
+> smaller diff is not yours. **Boundary:** correctness belongs to `referee-software`, abuse to
+> `auditor-security`; simpler-but-wrong is out of scope.
+
 ---
 
 ## Family F — Domain & synthesis
 
-### `referee-domain` — subject-matter expert *(parameterised; specified)*
+### `referee-domain` — subject-matter expert *(parameterised)* **[built]**
 > You are a senior expert in **{FIELD}**. Attack the work on substance rather than method: does it
 > contradict established results without acknowledging them? Does it reinvent something with a known
 > name and known pitfalls? Are the constructs the ones the field actually uses? Cite specific prior
@@ -626,7 +637,7 @@ inability), `referee-eval-protocol` (harness configuration degrees of freedom), 
 (SR 11-7 governance envelope), `critic-incident-narrative` (postmortem hindsight bias),
 `referee-evidence-synthesis` (PRISMA-S/RoB-2/GRADE process), `critic-dashboard-defaults`
 (default view and adversarial view construction), `auditor-fairness` (impossibility-aware),
-`skeptic-decision-risk` (change/rollout risk only), `auditor-simplicity`, `reviewer-cost`,
+`skeptic-decision-risk` (change/rollout risk only), `reviewer-cost`,
 `skeptic-saturation`.
 
 ---
@@ -640,17 +651,13 @@ inability), `referee-eval-protocol` (harness configuration degrees of freedom), 
 | Public release / press / policy brief | hostile-reader + summary-fidelity + editor-claims |
 | LLM-coded dataset → statistics | surrogate-labels + measurement + data-integrity |
 | Predictive model / benchmark claim | leakage + surrogate-labels + fragility |
-| Data pipeline / ETL | data-integrity + leakage + statistics† |
+| Data pipeline / ETL | data-integrity + leakage + statistics |
 | Published tables / public data product | disclosure + tie-out + data-integrity |
 | Commissioned / stakeholder-facing analysis | motivated-analysis + fragility + editor-claims |
 | Preregistered study / analysis with a spec | protocol-adherence + fragility + econometrics |
-| Literature review / evidence brief | citation-integrity + domain† + editor-claims |
-| Service / API / infrastructure | software† + security† + operability† |
-| Code change / refactor | software† + simplicity† + security† |
-
-**†** = specified above but **not yet built** as an agent file (`referee-statistics`, `referee-domain`,
-`referee-software`, `auditor-security`, `critic-operability`, `auditor-simplicity`). The skill offers
-only **[built]** personas and drops † names at dispatch; engineering targets are not yet served.
+| Literature review / evidence brief | citation-integrity + domain + editor-claims |
+| Service / API / infrastructure | software + security + operability |
+| Code change / refactor | software + simplicity + security |
 
 Rules of thumb:
 - **Three is the sweet spot.** Two rarely collide; five is mostly redundant unless the artifact is

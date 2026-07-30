@@ -84,19 +84,13 @@ does not fit and would read badly anyway. Instead:
 | Public release / press / policy brief | hostile-reader + summary-fidelity + editor-claims |
 | LLM-coded dataset → statistics | surrogate-labels + measurement + data-integrity |
 | Predictive model / benchmark claim | leakage + surrogate-labels + fragility |
-| Data pipeline / ETL | data-integrity + leakage + statistics† |
+| Data pipeline / ETL | data-integrity + leakage + statistics |
 | Published tables / public data product | disclosure + tie-out + data-integrity |
 | Commissioned / stakeholder-facing analysis | motivated-analysis + fragility + editor-claims |
 | Preregistered study / analysis with a spec | protocol-adherence + fragility + econometrics |
-| Literature review / evidence brief | citation-integrity + domain† + editor-claims |
-| Service / API / infrastructure | software† + security† + operability† |
-| Code change / refactor | software† + simplicity† + security† |
-
-**† specified but not built in this release** — no agent file yet (see `references/reviewers.md`).
-The picker is built from `agents/` (above), so it silently omits † personas; if a recommendation
-drops below two available personas, fall back to offering that family's built roster. Engineering
-targets (service/API, code change) are **not yet served** by this roster — say so rather than
-substituting a research persona.
+| Literature review / evidence brief | citation-integrity + domain + editor-claims |
+| Service / API / infrastructure | software + security + operability |
+| Code change / refactor | software + simplicity + security |
 
 **Three is the sweet spot.** Two rarely collide; five is mostly redundant unless the artifact is large.
 If two selected personas would attack the same surface, say so and suggest dropping one — overlapping
