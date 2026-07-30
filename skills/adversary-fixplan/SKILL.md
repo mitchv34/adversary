@@ -15,22 +15,35 @@ documents under review.
 ## Step 1 — Load
 - Resolve `<rundir>` (most recent `~/.agent/adversary/<slug>/`, or a path given as argument).
 - Read `<rundir>/findings.json` (**required**).
-- Read `<rundir>/annotations.mapped.json` if present (from Phase 2). If absent, proceed with the
-  findings as-is — the reader added no overrides.
+- Read the reader's annotations if present, in this order:
+  - `<rundir>/annotations.json` — the **self-annotating report's export**:
+    `{ decision, annotations: [ { finding_id, verdict, comment } ] }`. The `verdict` **is** the bucket
+    already (Step 2), so no free-text interpretation is needed.
+  - else `<rundir>/annotations.mapped.json` — the **plannotator fallback**:
+    `[ { finding_id, quoted, comment, … } ]` with free-text comments you interpret into buckets.
+  - If neither exists, proceed with the findings as-is — the reader added no overrides.
 
 ## Step 2 — Apply the reader's annotations to the findings
-The reader's comments **override** the reviewers. Interpret each comment's free text into one bucket —
-do **not** make the user learn a syntax:
+The reader's verdicts **override** the reviewers.
 
-| Bucket | Signal in the comment | Effect on the finding |
-|---|---|---|
-| **reject** | "this is wrong", "false positive", "doesn't apply because…" | drop the finding; record the reader's reason in the plan's *Dropped* list |
-| **already-handled** | "done", "fixed in v2", "handled in `foo.py`" | drop; note **where** the reader says it is handled |
-| **downgrade / upgrade** | "not a blocker", "deprioritise" / "this is THE blocker", "critical" | move it down / up a tier |
-| **expand** | "needs more investigation", "unsure", "look deeper" | keep and promote to a **Tier-1** investigation item |
+**From the self-annotating report**, each annotation already carries a `verdict` — apply it directly:
 
-A `finding_id: null` annotation is a **review-wide directive** — apply it to the whole plan (e.g.
-"focus only on the wage-level claims, ignore the formatting notes").
+| verdict | Effect on the finding |
+|---|---|
+| **accept** | keep as-is (the reader confirms it) |
+| **reject** | drop the finding; record the reader's `comment` in the plan's *Dropped* list |
+| **already-handled** | drop; note **where** the `comment` says it is handled |
+| **downgrade / upgrade** | move it down / up a tier |
+| **expand** | keep and promote to a **Tier-1** investigation item |
+
+**From the plannotator fallback** (free-text comments, no `verdict`), interpret each comment into the
+same buckets — do not make the user learn a syntax: *"this is wrong / false positive"* → reject;
+*"done / fixed in v2 / handled in `foo.py`"* → already-handled; *"not a blocker / deprioritise"* →
+downgrade, *"this is THE blocker"* → upgrade; *"needs more investigation / unsure"* → expand.
+
+A `finding_id: null` annotation, or a top-level `decision` of `approved`/`dismissed`, is a
+**review-wide directive** — apply it to the whole plan (e.g. `dismissed` → there is nothing to plan;
+`approved` → produce the errata but mark the plan advisory).
 
 **Do not defend findings that attack work you produced.** When a reviewer is right, the correction
 belongs in the errata — do not argue it away.

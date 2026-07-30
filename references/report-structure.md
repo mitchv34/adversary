@@ -22,6 +22,9 @@ and `findings.json` stands as the deliverable — see the skill's render step.
   attribute persisted in `localStorage`. Pattern: `:root:not([data-theme])` inside the media query,
   plus `[data-theme="dark"]` for the override.
 - **Sticky section nav** with scroll-spy for 4+ sections.
+- **Self-annotating.** Give every finding section `class="finding" data-fid="<id>"` — the `<id>` MUST
+  match the finding `id` in `findings.json` so fixplan can join on it — and embed the annotation layer
+  (see below). This puts the Phase-2 UI *inside* the report.
 - **Build long HTML in chunks**, not one heredoc / single write — large single writes fail
   (spec §7). Write the shell first, append sections.
 
@@ -36,6 +39,18 @@ and `findings.json` stands as the deliverable — see the skill's render step.
 4. **What survives** — the safe-to-build-on table.
 5. **The fix plan** — tiered *(populated by `/adversary:fixplan`; a placeholder in Phase 1)*.
 6. **Closing note** on method.
+
+## Annotation layer (self-annotating report)
+
+The report carries its own Plannotator-style annotation UI, so Phase 2 needs no external tool. Embed
+`${CLAUDE_PLUGIN_ROOT}/references/annotation-layer.html` verbatim (replace `__RUN_SLUG__` with the run
+slug): a sticky toolbar (**Approve / Dismiss / Export / Reset**) plus, injected into every
+`.finding[data-fid]`, a row of verdict chips — `accept · reject · already-handled · downgrade ·
+upgrade · expand` — and a comment box. State persists in `localStorage`; **Export** downloads an
+`annotations.json` in the exact shape `/adversary:fixplan` reads:
+`{ decision, annotations: [ { finding_id, verdict, comment } ] }`. The verdicts map 1:1 to the fixplan
+buckets, so no free-text interpretation is required. `plannotator annotate` remains a **fallback** —
+for line-anchored comments on arbitrary passages, or a report without the embedded layer.
 
 ## Write the derivation, not just the verdict
 

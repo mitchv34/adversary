@@ -1,66 +1,67 @@
 ---
 name: adversary-annotate
-description: Phase 2 of the adversary loop. Opens the rendered review report in Plannotator's browser UI for the reader to approve, annotate, or dismiss — capturing line-anchored comments on specific findings — then routes to /adversary:fixplan when changes are requested. Thin wrapper over the plannotator CLI (v0.25.0).
+description: Phase 2 of the adversary loop. Opens the self-annotating Phase-1 report so the reader can approve / dismiss / annotate specific findings in the browser, then picks up the exported annotations.json for Phase 3. The report carries its own annotation UI; plannotator is a fallback for line-anchored comments on arbitrary passages.
 allowed-tools: Bash, Read, Write, Glob
 ---
 
 # `/adversary:annotate [report.html]`
 
-Phase 2 of the adversary loop. The reader reacts to the findings; Plannotator captures it as
-structured, **line-anchored** feedback that Phase 3 turns into a fix plan. This skill is deliberately
-thin — the CLI does the work.
+Phase 2 of the adversary loop. The reader reacts to the findings; the result is a structured
+`annotations.json` that Phase 3 turns into a fix plan. The Phase-1 report is **self-annotating** (it
+embeds `annotation-layer.html`), so this phase mostly opens it and collects the export.
 
 ---
 
 ## Step 1 — Resolve the report
-- If a path is given as the argument, use it.
-- Otherwise default to the **most recent** `~/.agent/adversary/<slug>/report.html` (newest by mtime).
-- If there is **no `report.html`** — the review skill defers the render when `visual-explainer` is
-  not installed — stop and say so plainly: Phase 2 needs a rendered artifact. Offer to render it
-  first, or accept an explicit markdown/HTML path to annotate instead. `findings.json` alone is not a
+- If a path is given as the argument, use it. Otherwise default to the **most recent**
+  `~/.agent/adversary/<slug>/report.html` (newest by mtime).
+- If there is **no `report.html`** (the review skill deferred the render because `visual-explainer`
+  was absent), stop and say so: Phase 2 needs a rendered artifact. `findings.json` alone is not a
   human-review surface.
-- Record `<rundir>` (the report's directory). You will read `findings.json` and write outputs there.
+- Record `<rundir>` (the report's directory).
 
-## Step 2 — Open Plannotator (this is the whole phase)
-Run, with an **absolute path**:
-
-    plannotator annotate <rundir>/report.html --gate --json --result-file <rundir>/annotations.json
-
-- `--gate` gives **approve / annotate / dismiss**, not just free comments.
-- `--json` emits the structured decision; `--result-file` publishes it **atomically** for Phase 3.
-- **Do NOT pass `--markdown`.** The report is HTML with MathJax; converting to markdown strips the
-  structure and the math.
-- Plannotator renders `.html` raw and captures annotations anchored to specific lines.
-- This **blocks** until the reader closes the browser session. It is inherently interactive — it
-  cannot complete in a fully headless run; say so if you detect no display is available.
-- (Available but not used by default: `--require-approval` makes the process exit 1 unless the reader
-  approves. We do **not** pass it — an `annotated` decision must flow forward to fixplan, not fail.)
-
-## Step 3 — Interpret the decision
-Read `<rundir>/annotations.json` (it mirrors stdout). The `decision` field routes:
-
-| decision | also appears as | action |
-|---|---|---|
-| `approved` | literal `The user approved.` | Acknowledge and **stop**. If a `feedback` field is present, the reader approved *with notes* — carry them forward as **non-blocking** guidance; do **not** revise the report over them. |
-| `dismissed` | empty output | Acknowledge and **stop** — closed without changes. |
-| `annotated` | — | Changes requested. Go to Step 4, then `/adversary:fixplan`. |
-
-## Step 4 — Localise annotations to findings *(annotated only)*
-Each item in `annotations[]` carries a **line range**, the **quoted passage**, and the reader's
-**comment**. For each one, resolve which finding it targets: match the quoted text (or the line range)
-against the finding sections in `<rundir>/findings.json`, and attach that finding's `id`. Write the
-enriched list to **`<rundir>/annotations.mapped.json`**:
-
-```json
-[{ "finding_id": "F3", "quoted": "...", "comment": "...", "line_start": 44, "line_end": 47 }]
+## Step 2 — Open the report and let the reader annotate
 ```
+open <rundir>/report.html      # macOS   (Linux: xdg-open)
+```
+Tell the reader how to use it: on each finding, pick a **verdict chip** — `accept · reject ·
+already-handled · downgrade · upgrade · expand` — and optionally add a **comment**; use the top bar to
+**Approve** or **Dismiss** the whole report; then click **Export annotations.json**. Export downloads
+the file (and copies it to the clipboard) in the exact shape Phase 3 reads. State auto-saves to
+`localStorage`, so they can close and reopen without losing work.
 
-Leave `"finding_id": null` when a comment is global or cannot be matched to one finding — Phase 3
-treats those as review-wide directives.
+## Step 3 — Pick up the exported annotations
+The browser downloads `annotations.json`. Retrieve it into the run dir:
+1. If `<rundir>/annotations.json` already exists (the reader saved it there), use it.
+2. Otherwise move the newest `~/Downloads/annotations.json` to `<rundir>/annotations.json` (use an
+   explicit absolute path; confirm it parses as JSON with a `decision` field before moving on).
+3. If neither exists, the reader has not exported yet — ask them to click **Export**, or offer the
+   plannotator fallback below.
 
-**Do not interpret the comments into fix buckets here** (reject / downgrade / expand / already-handled)
-— that is `/adversary:fixplan`'s job. This phase only *captures and localises*.
+## Step 4 — Interpret the decision
+Read `<rundir>/annotations.json`. Its shape is
+`{ "decision": "...", "annotations": [ { "finding_id", "verdict", "comment" } ] }`:
+
+| decision | action |
+|---|---|
+| `approved` | Acknowledge and **stop** — the reader accepts the review as-is. Any per-finding comments are non-blocking notes; carry them forward but do not force changes. |
+| `dismissed` | Acknowledge and **stop** — closed without changes. |
+| `annotated` | Changes requested. Hand off to `/adversary:fixplan`, which reads this file directly (the verdicts already map to its buckets — no interpretation needed here). |
 
 ## Step 5 — Hand off
-Report to the user: the decision; how many annotations mapped, and to which findings; and that
-`/adversary:fixplan` is next (it reads `findings.json` + `annotations.mapped.json`).
+Report the decision, how many findings were annotated and with which verdicts, and that
+`/adversary:fixplan` is next (it reads `findings.json` + `annotations.json`).
+
+---
+
+## Fallback — `plannotator annotate`
+Use this only when the reader wants **line-anchored comments on arbitrary passages** (not just
+per-finding verdicts), or the report lacks the embedded layer:
+```
+plannotator annotate <rundir>/report.html --gate --json --result-file <rundir>/annotations.json
+```
+Do **not** pass `--markdown` (it strips the math). Then map each item in the returned `annotations[]`
+(line range + quoted text + comment) to the finding it targets — by quoted text or nearest finding
+heading — and write `<rundir>/annotations.mapped.json` as
+`[{finding_id, quoted, comment, line_start, line_end}]` for Phase 3. In this path the comments are
+free text, so Phase 3 interprets them into buckets itself.

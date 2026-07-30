@@ -196,6 +196,11 @@ the per-reviewer analyses in `<RUN DIR>/reviews/` (which carry the full derivati
 constraints in `${CLAUDE_PLUGIN_ROOT}/references/report-structure.md`. Write `report.html` to the run
 dir and open it.
 
+Require the report to be **self-annotating** (per report-structure.md): each finding section carries
+`data-fid="<finding id from findings.json>"`, and the report embeds
+`${CLAUDE_PLUGIN_ROOT}/references/annotation-layer.html` verbatim with `__RUN_SLUG__` replaced by the
+run slug. That embedded UI is Phase 2's primary annotation surface (`/adversary:annotate`).
+
 **Guard the call.** `visual-explainer` is a separate skill and may not be installed. Check first; if
 it is unavailable, **skip the render, keep `findings.json`, and say so plainly**:
 

@@ -1,0 +1,143 @@
+<!--
+  adversary — embedded annotation layer (Plannotator-style, self-contained).
+
+  Purpose: make the Phase-1 report annotatable IN THE BROWSER, with no server and no
+  external tool. The reader sets a per-finding verdict + comment; "Export" downloads an
+  annotations.json in the exact shape /adversary:fixplan consumes.
+
+  HOW TO EMBED (the render step / visual-explainer does this):
+  1. Give every finding section the class `finding` and a stable `data-fid` — e.g.
+     <div class="finding invalid" data-fid="F1"> … </div>. The fid MUST match the
+     finding `id` in findings.json so fixplan can join on it.
+  2. Place the .annotbar markup (below) as the first child of <main>.
+  3. Paste the <style> and <script> blocks below into the report verbatim.
+  4. Replace __RUN_SLUG__ with the run-dir slug (unique localStorage key per review).
+  It assumes the report already defines the theme variables report-structure.md mandates
+  (--surface, --surface-2, --bg, --border, --text, --text-dim, --gold, --invalid,
+  --caveat, --survives). No other dependency.
+
+  VERDICTS map 1:1 to the fixplan buckets, so no free-text interpretation is needed:
+    accept · reject · already-handled · downgrade · upgrade · expand
+-->
+
+<!-- (A) toolbar — first child of <main> -->
+<div class="annotbar">
+  <span class="ab-title">Annotate</span>
+  <span class="ab-count" id="abCount">0 annotations</span>
+  <button class="abtn" id="abApprove">✓ Approve report</button>
+  <button class="abtn" id="abDismiss">✕ Dismiss</button>
+  <button class="abtn primary" id="abExport">⇩ Export annotations.json</button>
+  <button class="abtn" id="abReset">↺ Reset</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- (B) styles -->
+<style>
+  .annotbar{position:sticky;top:0;z-index:40;display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    background:var(--surface);border:1px solid var(--border);border-radius:0 0 12px 12px;
+    padding:11px 16px;margin:0 0 4px;box-shadow:0 6px 20px -14px rgba(0,0,0,.5)}
+  .annotbar .ab-title{font-family:"Instrument Serif",serif;font-size:20px;margin-right:2px}
+  .annotbar .ab-count{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--text-dim);margin-right:auto}
+  .abtn{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.04em;cursor:pointer;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:7px}
+  .abtn:hover{border-color:var(--gold)}
+  .abtn.primary{background:var(--gold);color:#1c1a17;border-color:var(--gold);font-weight:600}
+  .abtn.dstate{border-color:var(--survives);color:var(--survives)}
+  .abtn.dstate.dismiss{border-color:var(--invalid);color:var(--invalid)}
+  .annot{margin-top:20px;padding-top:16px;border-top:1px dashed var(--border)}
+  .annot .arow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+  .annot .alabel{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);margin-right:4px}
+  .vchip{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.03em;cursor:pointer;
+    background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:5px 11px;border-radius:999px}
+  .vchip:hover{color:var(--text);border-color:var(--gold)}
+  .vchip[aria-pressed="true"]{color:#1c1a17;font-weight:600}
+  .vchip[data-v="accept"][aria-pressed="true"]{background:var(--survives);border-color:var(--survives)}
+  .vchip[data-v="reject"][aria-pressed="true"],
+  .vchip[data-v="already-handled"][aria-pressed="true"]{background:var(--invalid);border-color:var(--invalid);color:#fff}
+  .vchip[data-v="downgrade"][aria-pressed="true"],
+  .vchip[data-v="upgrade"][aria-pressed="true"],
+  .vchip[data-v="expand"][aria-pressed="true"]{background:var(--caveat);border-color:var(--caveat);color:#fff}
+  .annot textarea{width:100%;min-height:52px;resize:vertical;background:var(--bg);color:var(--text);
+    border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:"Newsreader",serif;font-size:16px}
+  .annot textarea:focus{outline:none;border-color:var(--gold)}
+  .finding.has-annot{box-shadow:inset 3px 0 0 var(--gold)}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--text);color:var(--bg);
+    font-family:"JetBrains Mono",monospace;font-size:13px;padding:11px 18px;border-radius:9px;opacity:0;
+    transition:opacity .25s;pointer-events:none;z-index:60;max-width:88vw}
+  .toast.show{opacity:1}
+  @media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<!-- (C) behaviour -->
+<script>
+  (function(){
+    var KEY='adv-annot::__RUN_SLUG__';
+    var VERDICTS=[['accept','Accept'],['reject','Reject'],['already-handled','Already handled'],
+                  ['downgrade','Downgrade'],['upgrade','Upgrade'],['expand','Expand']];
+    var state=load();
+    var findings=[].slice.call(document.querySelectorAll('.finding[data-fid]'));
+    function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{decision:null,items:{}}; }
+                     catch(e){ return {decision:null,items:{}}; } }
+    function save(){ localStorage.setItem(KEY, JSON.stringify(state)); refresh(); }
+    findings.forEach(function(f){
+      var fid=f.getAttribute('data-fid');
+      var box=document.createElement('div'); box.className='annot';
+      var row=document.createElement('div'); row.className='arow';
+      var lab=document.createElement('span'); lab.className='alabel'; lab.textContent='Your verdict'; row.appendChild(lab);
+      VERDICTS.forEach(function(v){
+        var b=document.createElement('button'); b.className='vchip'; b.type='button';
+        b.setAttribute('data-v',v[0]); b.textContent=v[1]; b.setAttribute('aria-pressed','false');
+        b.addEventListener('click',function(){
+          var cur=(state.items[fid]||{}); cur.verdict=(cur.verdict===v[0])?null:v[0];
+          state.items[fid]=cur; save();
+        });
+        row.appendChild(b);
+      });
+      box.appendChild(row);
+      var ta=document.createElement('textarea');
+      ta.placeholder='Comment for the fix plan — e.g. "we already handle this in loader.py" or "deprioritise".';
+      ta.addEventListener('input',function(){ var cur=(state.items[fid]||{}); cur.comment=ta.value; state.items[fid]=cur; saveLite(); });
+      box.appendChild(ta); f.appendChild(box); f._ta=ta;
+    });
+    var t=null; function saveLite(){ localStorage.setItem(KEY,JSON.stringify(state)); if(t)clearTimeout(t); t=setTimeout(refresh,300); }
+    function refresh(){
+      var n=0;
+      findings.forEach(function(f){
+        var fid=f.getAttribute('data-fid'); var cur=state.items[fid]||{};
+        f.querySelectorAll('.vchip').forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-v')===cur.verdict)); });
+        if(f._ta && document.activeElement!==f._ta){ f._ta.value=cur.comment||''; }
+        var active=!!(cur.verdict || (cur.comment&&cur.comment.trim())); f.classList.toggle('has-annot',active); if(active)n++;
+      });
+      document.getElementById('abCount').textContent = n+' annotation'+(n===1?'':'s')+(state.decision?(' · '+state.decision):'');
+      var ap=document.getElementById('abApprove'), di=document.getElementById('abDismiss');
+      ap.classList.toggle('dstate', state.decision==='approved');
+      di.classList.toggle('dstate', state.decision==='dismissed'); di.classList.toggle('dismiss', state.decision==='dismissed');
+    }
+    function decisionValue(){
+      if(state.decision) return state.decision;
+      var any=Object.keys(state.items).some(function(k){var i=state.items[k];return i.verdict||(i.comment&&i.comment.trim());});
+      return any?'annotated':'dismissed';
+    }
+    function payload(){
+      var anns=[];
+      Object.keys(state.items).forEach(function(fid){
+        var i=state.items[fid]; if(!i.verdict && !(i.comment&&i.comment.trim())) return;
+        anns.push({finding_id:fid, verdict:i.verdict||null, comment:(i.comment||'').trim()});
+      });
+      return {decision:decisionValue(), report:'report.html', annotations:anns};
+    }
+    function toast(m){ var el=document.getElementById('toast'); el.textContent=m; el.classList.add('show'); setTimeout(function(){el.classList.remove('show');},2600); }
+    document.getElementById('abApprove').addEventListener('click',function(){ state.decision=state.decision==='approved'?null:'approved'; save(); });
+    document.getElementById('abDismiss').addEventListener('click',function(){ state.decision=state.decision==='dismissed'?null:'dismissed'; save(); });
+    document.getElementById('abReset').addEventListener('click',function(){ if(confirm('Clear all annotations on this report?')){ state={decision:null,items:{}}; save(); } });
+    document.getElementById('abExport').addEventListener('click',function(){
+      var json=JSON.stringify(payload(),null,2);
+      var blob=new Blob([json],{type:'application/json'});
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='annotations.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      if(navigator.clipboard){ navigator.clipboard.writeText(json).then(function(){},function(){}); }
+      toast('annotations.json downloaded'+(navigator.clipboard?' + copied to clipboard':'')+' — feed it to /adversary:fixplan');
+    });
+    refresh();
+  })();
+</script>
