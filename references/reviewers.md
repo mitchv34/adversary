@@ -43,6 +43,7 @@ METHOD
   null and makes the test pass spuriously.
 - Distinguish "I think this is wrong" from "I showed this is wrong". Label each finding
   confidence: certain | likely | possible.
+- Canonical placebo and verification designs are in ${CLAUDE_PLUGIN_ROOT}/references/placebo-cookbook.md.
 
 REQUIRED OUTPUT
 (a) Findings, ranked by severity. Each MUST name its ANCHOR — the exact artifact element it

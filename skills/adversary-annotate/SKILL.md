@@ -31,11 +31,17 @@ the file (and copies it to the clipboard) in the exact shape Phase 3 reads. Stat
 `localStorage`, so they can close and reopen without losing work.
 
 ## Step 3 — Pick up the exported annotations
-The browser downloads `annotations.json`. Retrieve it into the run dir:
-1. If `<rundir>/annotations.json` already exists (the reader saved it there), use it.
-2. Otherwise move the newest `~/Downloads/annotations.json` to `<rundir>/annotations.json` (use an
-   explicit absolute path; confirm it parses as JSON with a `decision` field before moving on).
-3. If neither exists, the reader has not exported yet — ask them to click **Export**, or offer the
+The export downloads a **run-slugged** file `annotations.<slug>.json` (the slug is what stops it
+colliding with other runs and with browser de-duping). Retrieve it into the run dir as
+`annotations.json`:
+1. **Primary:** if `<rundir>/annotations.json` already exists (the reader saved it straight into the
+   run dir), use it.
+2. Else move `~/Downloads/annotations.<slug>.json` **matching this run's slug** to
+   `<rundir>/annotations.json` (newest if several match). Do **NOT** fall back to a bare
+   `~/Downloads/annotations.json` — it may be a different run's file, and the JSON + `decision` guard
+   cannot tell them apart (both parse). Cross-check that the moved file's `finding_id`s all exist in
+   `findings.json` before proceeding.
+3. If nothing matches, the reader has not exported yet — ask them to click **Export**, or offer the
    plannotator fallback below.
 
 ## Step 4 — Interpret the decision

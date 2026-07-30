@@ -71,7 +71,9 @@
 <!-- (C) behaviour -->
 <script>
   (function(){
-    var KEY='adv-annot::__RUN_SLUG__';
+    var SLUG='__RUN_SLUG__';
+    if(SLUG.indexOf('__RUN_SLUG__')>=0){ SLUG=(location.pathname.split('/').slice(-2,-1)[0]||'report'); } // F2: fallback if renderer skipped substitution
+    var KEY='adv-annot::'+SLUG;
     var VERDICTS=[['accept','Accept'],['reject','Reject'],['already-handled','Already handled'],
                   ['downgrade','Downgrade'],['upgrade','Upgrade'],['expand','Expand']];
     var state=load();
@@ -124,7 +126,7 @@
         var i=state.items[fid]; if(!i.verdict && !(i.comment&&i.comment.trim())) return;
         anns.push({finding_id:fid, verdict:i.verdict||null, comment:(i.comment||'').trim()});
       });
-      return {decision:decisionValue(), report:'report.html', annotations:anns};
+      return {decision:decisionValue(), report:(location.pathname.split('/').pop()||'report.html'), annotations:anns};
     }
     function toast(m){ var el=document.getElementById('toast'); el.textContent=m; el.classList.add('show'); setTimeout(function(){el.classList.remove('show');},2600); }
     document.getElementById('abApprove').addEventListener('click',function(){ state.decision=state.decision==='approved'?null:'approved'; save(); });
@@ -133,7 +135,7 @@
     document.getElementById('abExport').addEventListener('click',function(){
       var json=JSON.stringify(payload(),null,2);
       var blob=new Blob([json],{type:'application/json'});
-      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='annotations.json';
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='annotations.'+SLUG+'.json'; // F1: run-slugged, no ~/Downloads collision
       document.body.appendChild(a); a.click(); a.remove();
       if(navigator.clipboard){ navigator.clipboard.writeText(json).then(function(){},function(){}); }
       toast('annotations.json downloaded'+(navigator.clipboard?' + copied to clipboard':'')+' — feed it to /adversary:fixplan');
