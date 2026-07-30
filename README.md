@@ -4,70 +4,102 @@ A Claude Code plugin for **adversarial review that bites, not flattery**. It tur
 work might be wrong" into a prioritised, evidence-backed fix plan.
 
 The failure mode it targets is *plausible but wrong* — research code, data pipelines, empirical
-claims, design docs — not "throws an exception". It is not a linter, not a test runner, not a CI
-gate, and not a replacement for human review. It is a machine for **generating the agenda** for
+claims, reports, design docs — not "throws an exception". It is not a linter, not a test runner, not a
+CI gate, and not a replacement for human review. It is a machine for **generating the agenda** for
 human review.
 
 ## The three-phase loop
 
 ```
   /adversary:review  ─────────►  /adversary:annotate  ─────────►  /adversary:fixplan
-  pick reviewers,                open the HTML report in           read the annotations,
-  run them in parallel,          Plannotator, collect              emit a tiered plan +
-  render an HTML report          the reader's comments             patch the source docs
+  pick reviewers,                annotate findings in the         read the annotations,
+  run them in parallel,          self-annotating report,          emit a tiered plan + errata,
+  render an HTML report          export annotations.json          (--apply patches the sources)
 ```
 
-- **`/adversary:review`** — pick N reviewer personas (or accept the recommended set for the target
-  type). Each runs as an *independent, parallel* subagent with its own hostile mandate. Findings are
-  merged, deduplicated, and — where the renderer is available — rendered as a self-contained HTML
-  report with LaTeX derivations.
-- **`/adversary:annotate`** — open the report in [Plannotator]'s annotation UI and comment on
-  specific findings. *(Phase 2 — not built yet.)*
-- **`/adversary:fixplan`** — merge annotations with findings into a tiered action plan ordered by
-  (credibility gained) / (effort), plus an errata document. *(Phase 3 — not built yet.)*
+- **`/adversary:review [target] [--reviewers a,b,c] [--depth quick|standard|deep]`** — pick reviewer
+  personas (or accept the recommended set for the detected target type). Each runs as an *independent,
+  parallel* subagent with its own hostile mandate; findings are merged, corroboration-marked, and
+  rendered as a self-contained HTML report with LaTeX derivations (via the `visual-explainer` skill;
+  if it is absent the render is skipped and `findings.json` stands).
+- **`/adversary:annotate [report.html]`** — the report is **self-annotating**: per-finding verdict
+  chips (`accept · reject · already-handled · downgrade · upgrade · expand`) + comments, exported as
+  `annotations.json`. `plannotator` is a fallback for line-anchored comments on arbitrary passages.
+- **`/adversary:fixplan [--apply]`** — merge annotations with findings into a tiered action plan
+  ordered by (credibility gained) ÷ (effort), plus an `ERRATA.md`. `--apply` patches corrected claims
+  inline into the source docs (marked `[CORRECTED — see ERRATA E#]`, never silently) and opens a
+  review of the diff.
 
 ## Why it works (the load-bearing rules)
 
-These are the non-obvious lessons from the manual run the plugin is derived from. Drop any and it
-produces flattery instead of review:
+Drop any of these and it produces flattery instead of review:
 
 1. **Independence is the whole mechanism.** Reviewers run in parallel with *no shared context* and
    never see each other's output. Value comes from *collision* — two mandates independently reaching
-   the same conclusion establishes it.
-2. **Verify, don't read.** Every persona recomputes the numbers it relies on and shows its work. A
-   reviewer that only reads produces opinions; one that recomputes produces findings.
-3. **The placebo test is the highest-value technique.** Feed the analysis noise / a shuffled input /
-   corrected units and check whether the result politely disappears. If it survives randomisation, it
-   was never in the data.
-4. **Demand deletions, not suggestions.** Personas quote the exact sentences they would force the
-   author to delete or soften.
-5. **Require the survivors.** Every persona states what passed scrutiny and is safe to build on — the
-   honesty check on the reviewer.
+   the same conclusion **corroborates** it (a strong signal, not proof).
+2. **Verify, don't read.** Every persona recomputes the numbers it relies on and shows its work.
+3. **Placebo + positive control.** Feed the analysis noise / a shuffled input / corrected units and
+   check the result disappears; then confirm a *planted* effect is recovered. Noise in → null out
+   **and** signal in → signal out.
+4. **Demand deletions, not suggestions.** Personas quote the exact sentences to delete or soften.
+5. **Require the survivors.** Every persona states what is safe to build on — the honesty check.
 6. **Verdict, not a score.** One line naming what is publishable/shippable versus what is not.
 
-## Current status
+## Personas
 
-This repo is being built in stages. **Phase 1 (`/adversary:review`) core pipeline** is the current
-scope: reviewer selection, parallel dispatch, merge to `findings.json`, validated against a
-planted-error fixture. The HTML render delegates to the `visual-explainer` skill when it is
-installed. Phases 2–3 and the remaining persona library are planned but not yet built — see
-`specs/SPEC.md` for the full design.
+22 hostile personas across six families (quantitative/inferential, data/measurement/ML, claims &
+deliverable, exposure & risk, engineering, domain & synthesis) — see `references/reviewers.md` for the
+library and the target-type → recommended-set matrix. Each persona is an agent file, so **you can add
+your own** by dropping a `<name>.md` into `agents/`; it appears in the picker automatically.
+
+## Status & validation
+
+All three phases and the 22-persona library are built. The pipeline is exercised against a
+**planted-error fixture** (`fixtures/planted-error/`) with a known raw-vs-percentile scale error. On
+the recorded run an **un-seeded** reviewer (`auditor-data-integrity`, whose mandate does not name the
+flaw's fingerprint) discovered the error cold; a **seeded** reviewer (`referee-measurement`, whose
+mandate does name the `mean 0.5 / sd 0.2887` signature) serves as a *positive control*. The discovery
+claim rests on the un-seeded catch — the seeded catch only proves the plumbing.
+
+The plugin has also been run **on its own repo** (dogfood): three blind reviewers found real bugs,
+including a fatal annotation-handoff defect, which were then fixed. See `specs/SPEC.md` for the full
+design; the manual "reference run" it cites was an un-committed session (recollection, not in-repo
+evidence).
 
 ## Layout
 
 ```
 adversary/
-├── .claude-plugin/plugin.json
-├── skills/adversary-review/SKILL.md   # phase 1 orchestrator
-├── agents/                            # one hostile persona per file
-├── references/                        # persona library, placebo cookbook, report structure
-└── fixtures/planted-error/            # ground-truth validation artifact
+├── .claude-plugin/plugin.json + marketplace.json
+├── skills/
+│   ├── adversary-review/SKILL.md      # phase 1 orchestrator
+│   ├── adversary-annotate/SKILL.md    # phase 2 (self-annotating report; plannotator fallback)
+│   └── adversary-fixplan/SKILL.md     # phase 3 (tiered plan + errata, --apply)
+├── agents/                            # 22 hostile personas, one per file (§0 shared rules baked in)
+├── references/                        # reviewers.md, placebo-cookbook.md, report-structure.md, annotation-layer.html
+├── fixtures/planted-error/            # ground-truth validation artifact
+└── scripts/check_shared_rules.py      # asserts §0 is identical across all personas
 ```
 
-## Install
+## Install (local)
 
-Register this directory as a local plugin in Claude Code, then `/adversary:review` (and, once built,
-`:annotate` / `:fixplan`) become available. Users can add their own personas by dropping an agent
-file in `agents/`.
+The repo doubles as a single-plugin marketplace (`.claude-plugin/marketplace.json`). In Claude Code:
 
-[Plannotator]: #
+```
+/plugin marketplace add ~/Projects/adversary
+/plugin install adversary@adversary
+```
+
+Then `/adversary:review`, `/adversary:annotate`, `/adversary:fixplan` are available. To share with a
+colleague, push the repo and have them `/plugin marketplace add <git-url>` then the same install.
+
+**Optional dependencies:** `visual-explainer` skill (HTML report render — degrades to `findings.json`
+if absent) and the `plannotator` CLI (only for the line-anchored annotation fallback). Neither is
+required for the core review.
+
+## Verifying the build
+
+```
+python3 scripts/check_shared_rules.py          # §0 identical across all 22 personas
+python3 fixtures/planted-error/make_fixture.py  # regenerate the fixture (deterministic)
+```

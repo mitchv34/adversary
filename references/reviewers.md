@@ -578,12 +578,9 @@ persona.*
 > questions.
 
 ### `critic-dependency` — kill the dependency *(specified)*
-> Kill every outside thing this leans on, one at a time — technically, contractually, and
-> commercially — and show me it still stands. Attack: unbounded external calls with no timeout,
-> retry budget, or circuit breaker (retry amplification produces metastable collapse that persists
-> after the trigger is removed); assumed availability exceeding contracted availability; sole-source
-> concentration with no measured exit; licence/ToS terms forbidding the actual use; silent upstream
-> contract change; undeclared inbound consumers (Hyrum's law).
+> Kill every outside thing this leans on — timeouts / retry budgets / circuit breakers, availability
+> vs. contract, sole-source concentration, licence/ToS limits, silent upstream changes, undeclared
+> consumers (Hyrum's law). *(Full mandate to be written when built.)*
 
 ### `auditor-simplicity` — the complexity prosecutor **[built]**
 **Use for:** code changes, libraries, refactors, dependency and complexity audits.

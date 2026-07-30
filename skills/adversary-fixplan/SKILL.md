@@ -74,6 +74,11 @@ claim become errata; process/method findings stay in the plan only.
 ## Step 5 — `--apply` (only when the flag is set)
 Patch the corrected claims **into the source documents** under review (the original target — not this
 run dir):
+
+**Precondition (headless safety):** confirm a display/browser is available so the `plannotator review
+--local` in step 4 can actually open. If none is, **stop before editing any source file** and deliver
+the plan + errata only — never leave sources patched-but-unreviewed.
+
 1. For each erratum, locate the published claim at its `anchor` (`file:line`).
 2. Edit it in place: keep the original value **visible**, and append the correction tagged
    **`[CORRECTED — see ERRATA E#]`**. **Never silently overwrite a published number.**

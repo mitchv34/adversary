@@ -24,6 +24,10 @@ embeds `annotation-layer.html`), so this phase mostly opens it and collects the 
 ```
 open <rundir>/report.html      # macOS   (Linux: xdg-open)
 ```
+**Headless / no display:** do **not** block on `open` — print the report path and **poll
+`<rundir>/annotations.json`** instead (the reader opens the report elsewhere and drops the export in).
+`open` with no window server errors or silently no-ops, and nobody annotates.
+
 Tell the reader how to use it: on each finding, pick a **verdict chip** — `accept · reject ·
 already-handled · downgrade · upgrade · expand` — and optionally add a **comment**; use the top bar to
 **Approve** or **Dismiss** the whole report; then click **Export annotations.json**. Export downloads

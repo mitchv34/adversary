@@ -4,6 +4,12 @@
 workflow manually and end-to-end against a real research pipeline; every design choice below is
 derived from what actually worked or actually broke in that run.
 
+> **Note (post-build).** The plugin is now built (all three phases + 22 personas; see
+> `../README.md`). The "reference run" cited throughout was a manual, **un-committed** session — its
+> specific figures (percentages, counts, "was retracted") are the author's recollection, **not**
+> artifacts reproducible in this repo. Treat them as motivating anecdote, not evidence. The
+> repeatable ground-truth check lives in `../fixtures/planted-error/`.
+
 **Build this in a fresh session, in its own repo** — not in a research/analysis repo.
 
 ---
