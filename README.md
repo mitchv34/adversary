@@ -98,6 +98,43 @@ from a bundled shell (`references/report-shell.html` + `annotation-layer.html`).
 the `visual-explainer` skill (richer report styling) and the `plannotator` CLI (line-anchored
 annotation fallback) — install neither to get the complete review → annotate → fixplan loop.
 
+## Running unattended (set and forget)
+
+Long reviews dispatch several reviewer subagents, each running `python3` to recompute numbers, so by
+default Claude Code prompts you to approve every subagent deployment and every inner command. To let a
+review run without babysitting, pre-authorize its footprint. A review only **reads** the target and
+writes scratch/results under the run dir (`~/.agent/adversary/`) — by the §0 rules it never modifies
+the target.
+
+Add to **`.claude/settings.json`** (project scope) or **`~/.claude/settings.json`** (user scope):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Agent(*)",
+      "Bash(python3 *)"
+    ]
+  }
+}
+```
+
+- **`Agent(*)`** — stop prompting for each reviewer subagent's *deployment* (subagent dispatch is gated
+  by the `Agent` tool, not `Task`). Narrow it to `Agent(adversary:*)` to auto-approve only these.
+- **`Bash(python3 *)`** — the reviewers' recompute step. Subagents **inherit** the session allow-list,
+  so this silences the inner prompts too. The space before `*` is a word boundary (matches
+  `python3 /abs/x.py`, `python3 -c "..."`).
+- **Reads are not gated** (Read/Grep/Glob run without prompts in the working dir) — no rule needed.
+- If writes to the run dir still prompt, add `Write(/absolute/home/.agent/adversary/**)` — an
+  **absolute** path (`~` does not expand in permission rules).
+
+**Nuclear option (fully trusted / isolated runs only):** `claude --permission-mode bypassPermissions`
+(or `"defaultMode": "bypassPermissions"`) skips *all* prompts — it removes every guardrail, not just the
+review's, so only use it in an environment you trust.
+
+> A plugin cannot grant itself these permissions on install — this is your explicit opt-in. Add the
+> rules consciously, and after the first run confirm the prompts actually stopped.
+
 ## Verifying the build
 
 ```
