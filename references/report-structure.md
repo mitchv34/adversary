@@ -1,9 +1,11 @@
 # Report structure & render constraints
 
-The Phase-1 HTML report is rendered by the existing **`visual-explainer` skill** — delegate to it,
-do not reimplement. The `adversary-review` skill passes it the merged findings plus the constraints
-below. When `visual-explainer` is not installed (e.g. a headless container), the render is skipped
-and `findings.json` stands as the deliverable — see the skill's render step.
+The Phase-1 HTML report is rendered by the `adversary-review` skill **itself**, from the bundled
+self-contained template **`report-shell.html`** (in this directory) — **no external skill required**.
+The skill fills the shell with the merged findings per the constraints below and embeds
+`annotation-layer.html`. The `visual-explainer` skill, when installed, is an **optional enhancer** for
+richer styling; it is not a dependency. Only if HTML cannot be authored at all does `findings.json`
+stand alone.
 
 ## Render constraints (pass these to visual-explainer verbatim)
 

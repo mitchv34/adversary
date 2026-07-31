@@ -20,8 +20,8 @@ human review.
 - **`/adversary:review [target] [--reviewers a,b,c] [--depth quick|standard|deep]`** — pick reviewer
   personas (or accept the recommended set for the detected target type). Each runs as an *independent,
   parallel* subagent with its own hostile mandate; findings are merged, corroboration-marked, and
-  rendered as a self-contained HTML report with LaTeX derivations (via the `visual-explainer` skill;
-  if it is absent the render is skipped and `findings.json` stands).
+  rendered as a self-contained HTML report with LaTeX derivations from a **bundled template** —
+  no external skill required.
 - **`/adversary:annotate [report.html]`** — the report is **self-annotating**: per-finding verdict
   chips (`accept · reject · already-handled · downgrade · upgrade · expand`) + comments, exported as
   `annotations.json`. `plannotator` is a fallback for line-anchored comments on arbitrary passages.
@@ -76,7 +76,7 @@ adversary/
 │   ├── adversary-annotate/SKILL.md    # phase 2 (self-annotating report; plannotator fallback)
 │   └── adversary-fixplan/SKILL.md     # phase 3 (tiered plan + errata, --apply)
 ├── agents/                            # 22 hostile personas, one per file (§0 shared rules baked in)
-├── references/                        # reviewers.md, placebo-cookbook.md, report-structure.md, annotation-layer.html
+├── references/                        # reviewers.md, placebo-cookbook.md, report-structure.md, report-shell.html, annotation-layer.html
 ├── fixtures/planted-error/            # ground-truth validation artifact
 └── scripts/check_shared_rules.py      # asserts §0 is identical across all personas
 ```
@@ -93,9 +93,10 @@ The repo doubles as a single-plugin marketplace (`.claude-plugin/marketplace.jso
 Then `/adversary:review`, `/adversary:annotate`, `/adversary:fixplan` are available. To share with a
 colleague, push the repo and have them `/plugin marketplace add <git-url>` then the same install.
 
-**Optional dependencies:** `visual-explainer` skill (HTML report render — degrades to `findings.json`
-if absent) and the `plannotator` CLI (only for the line-anchored annotation fallback). Neither is
-required for the core review.
+**No external dependencies for the full loop.** The HTML report and its self-annotating layer render
+from a bundled shell (`references/report-shell.html` + `annotation-layer.html`). Optional *enhancers*:
+the `visual-explainer` skill (richer report styling) and the `plannotator` CLI (line-anchored
+annotation fallback) — install neither to get the complete review → annotate → fixplan loop.
 
 ## Verifying the build
 

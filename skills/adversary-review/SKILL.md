@@ -191,25 +191,27 @@ If the top finding attacks something *you* produced, correct it. Do not argue wi
 
 ## Step 7 — Render the report
 
-Delegate to the **`visual-explainer`** skill — do not reimplement HTML. Pass it the merged findings,
-the per-reviewer analyses in `<RUN DIR>/reviews/` (which carry the full derivations), and the
-constraints in `${CLAUDE_PLUGIN_ROOT}/references/report-structure.md`. Write `report.html` to the run
-dir and open it.
+**Render it yourself from the bundled shell — no external skill required.** Copy
+`${CLAUDE_PLUGIN_ROOT}/references/report-shell.html` to `<RUN DIR>/report.html`, then fill it per
+`${CLAUDE_PLUGIN_ROOT}/references/report-structure.md`: the masthead, the nav, and the §skeleton
+sections (verdict → how it ran → one section per finding **with the derivation** → what survives → the
+fix-plan placeholder → closing note), drawing the full LaTeX derivations from the per-reviewer files in
+`<RUN DIR>/reviews/`. Build the body in chunks (append sections), not one giant write.
 
-Require the report to be **self-annotating** (per report-structure.md): each finding section carries
-`data-fid="<finding id from findings.json>"`, and the report embeds
-`${CLAUDE_PLUGIN_ROOT}/references/annotation-layer.html` verbatim with `__RUN_SLUG__` replaced by the
-run slug. That embedded UI is Phase 2's primary annotation surface (`/adversary:annotate`).
+**Make it self-annotating** (this is Phase 2's annotation surface): give every finding block
+`class="finding invalid|caveat" data-fid="<finding id from findings.json>"`, and embed
+`${CLAUDE_PLUGIN_ROOT}/references/annotation-layer.html` at the two `EMBED annotation-layer` markers in
+the shell — paste its toolbar, `<style>`, and `<script>`, and replace `__RUN_SLUG__` with the run slug.
+Then open `<RUN DIR>/report.html`.
 
-**Guard the call.** `visual-explainer` is a separate skill and may not be installed. Check first; if
-it is unavailable, **skip the render, keep `findings.json`, and say so plainly**:
+**`visual-explainer` is an OPTIONAL enhancer, not a dependency.** If that skill is installed you may
+delegate to it for richer styling — but pass it the same report-structure.md constraints *and* the
+annotation-layer requirement. If it is absent, do **not** skip the render: the bundled shell above is
+the default and produces the full annotated report with zero external dependencies.
 
-> `HTML render deferred — the visual-explainer skill is not installed. Findings are complete at
-> <RUN DIR>/findings.json; re-run the render step in an environment where visual-explainer is
-> available.`
-
-Do not fabricate a report, and do not silently degrade to an unstyled dump — `findings.json` is the
-deliverable in that case, and the review is still valid.
+Only if you genuinely cannot author HTML at all, fall back to leaving `findings.json` as the deliverable
+and say so plainly — the review is still valid, but that is the true last resort, **not** the
+absent-`visual-explainer` path.
 
 ---
 
